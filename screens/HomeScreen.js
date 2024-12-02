@@ -1,138 +1,102 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity } from 'react-native';
-import { sections } from './sectionsData'; // Import your data
+import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity, TextInput } from 'react-native';
+
+// Declare 'images' array
+const images = Array.from({ length: 30 }, (_, index) => ({
+  id: `${index + 1}`,
+  uri: { uri: `https://via.placeholder.com/150?text=Image+${index + 1}` },
+  location: index % 2 === 0 ? 'Beach' : 'Mountain',
+  date: `2024-12-${String(index + 1).padStart(2, '0')}`,
+}));
 
 const HomeScreen = () => {
-  const [modalVisible, setModalVisible] = useState(false);  // To control the modal visibility
-  const [selectedImage, setSelectedImage] = useState(null);  // To store the selected image
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0); // Track selected image index
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredImages, setFilteredImages] = useState(images);
 
-  // Handler to open the modal and set the selected image
-  const handleImageClick = (imageUri) => {
-    setSelectedImage(imageUri);  // Set the clicked image
-    setModalVisible(true);  // Show the modal
+  const handleImageClick = (index) => {
+    setSelectedIndex(index);
+    setModalVisible(true);
   };
 
-  // Handler to close the modal
   const closeModal = () => {
-    setModalVisible(false);  // Hide modal
-    setSelectedImage(null);  // Reset selected image
+    setModalVisible(false);
+    setSelectedIndex(0);
   };
 
-  const renderItem = ({ item, index, sectionLength }) => (
-    <TouchableOpacity onPress={() => handleImageClick(item.uri)} style={styles.gridImageContainer}>
-      <Image
-        source={item.uri}
-        style={[
-          styles.gridImage,
-          index < sectionLength - 3 ? { marginBottom: 1 } : {}, // 1px space between rows except the last row
-        ]}
-      />
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    const lowerQuery = query.toLowerCase();
+    const filtered = images.filter(
+      (image) =>
+        image.location.toLowerCase().includes(lowerQuery) || image.date.includes(query)
+    );
+    setFilteredImages(filtered);
+  };
+
+  const renderItem = ({ item, index }) => (
+    <TouchableOpacity onPress={() => handleImageClick(index)} style={styles.gridImageContainer}>
+      <Image source={item.uri} style={styles.gridImage} />
+      <Text style={styles.imageMetadata}>{item.location}</Text>
+      <Text style={styles.imageMetadata}>{item.date}</Text>
     </TouchableOpacity>
   );
 
-  const renderSection = ({ item, index }) => (
-    <View style={styles.section}>
-      {item.title ? (
-        <Text style={styles.sectionTitle}>{item.title}</Text>
-      ) : null}
-      <FlatList
-        data={item.images}
-        renderItem={(imageItem) =>
-          renderItem({ ...imageItem, sectionLength: item.images.length })
-        }
-        keyExtractor={(image) => image.id}
-        numColumns={index === 0 ? 3 : 1} // 3 columns for the first section
-        columnWrapperStyle={index === 0 ? styles.noSpaceColumnWrapper : null}
-        showsHorizontalScrollIndicator={false}
-        horizontal={index !== 0}
-        key={index === 0 ? 'grid-layout' : `list-layout-${item.id}`} // Force re-render
-      />
+  const renderFullImage = ({ item }) => (
+    <View style={styles.imageSlide}>
+      <Image source={item.uri} style={styles.fullScreenImage} />
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={sections}
-        renderItem={renderSection}
-        keyExtractor={(section) => section.id}
-        ListEmptyComponent={<Text>No sections available</Text>}
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by location or date (YYYY-MM-DD)"
+        value={searchQuery}
+        onChangeText={handleSearch}
       />
-
-      {/* Modal for full-screen image view */}
-      <Modal
-        visible={modalVisible}
-        transparent={false}  // Makes the modal fill the screen
-        animationType="fade"
-        onRequestClose={closeModal}  // Close the modal when pressing back
-      >
-        
-        <View style={styles.modalContainer}>
-          <TouchableOpacity onRequestClose={closeModal}  style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
-          <Image
-            source={selectedImage}
-            style={styles.fullScreenImage}  // Full-screen style for the image
-          />
-        </View>
+      <FlatList
+        data={filteredImages}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        columnWrapperStyle={styles.noSpaceColumnWrapper}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={<Text style={styles.emptyText}>No images found</Text>}
+      />
+      <Modal visible={modalVisible} transparent={false} animationType="fade" onRequestClose={closeModal}>
+        <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+          <Text style={styles.closeButtonText}>X</Text>
+        </TouchableOpacity>
+        <FlatList
+          data={filteredImages}
+          horizontal
+          pagingEnabled
+          initialScrollIndex={selectedIndex}
+          keyExtractor={(item) => item.id}
+          renderItem={renderFullImage}
+          showsHorizontalScrollIndicator={false}
+        />
       </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-    paddingHorizontal: 10, // Padding inside the title
-    paddingTop: 5,
-    paddingBottom: 5,
-  },
-  gridImageContainer: {
-    flex: 1,
-  },
-  gridImage: {
-    width: 120,
-    height: 120,
-  },
-  noSpaceColumnWrapper: {
-    justifyContent: 'flex-start',
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-  },
-  // Modal styling
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'black',  // Set background to black for better contrast
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 20,
-  },
-  closeButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  fullScreenImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',  // Ensures the image maintains its aspect ratio
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  searchInput: { height: 40, borderColor: '#ccc', borderWidth: 1, margin: 10, paddingHorizontal: 10, borderRadius: 5 },
+  gridImageContainer: { flex: 1, margin: 1 },
+  gridImage: { width: 120, height: 120 },
+  imageMetadata: { fontSize: 12, textAlign: 'center', color: '#555' },
+  noSpaceColumnWrapper: { justifyContent: 'space-between' },
+  modalContainer: { flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' },
+  closeButton: { position: 'absolute', top: 40, right: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 20 },
+  closeButtonText: { color: 'white', fontSize: 16 },
+  fullScreenImage: { width: '100%', height: '100%', resizeMode: 'contain' },
+  imageSlide: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
+  emptyText: { textAlign: 'center', marginTop: 20, fontSize: 16, color: '#777' },
 });
 
 export default HomeScreen;
