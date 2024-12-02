@@ -1,0 +1,33 @@
+Hi Team,
+Please find the 5th lesson for React Native: Develop a gallery application that uses geolocation to highlight where the images were taken. It should have SQLite (research based).
+Gallery Application with Geolocation and SQLite Requirements:
+Objective:
+The objective of this project is to develop a gallery application that allows users to view images and see their locations on a map using geolocation. Additionally, the application should use SQLite for local data storage.
+Image Gallery:
+Display a grid or list of images stored in the application.
+Provide options to view images in full-screen mode or in a carousel/gallery view.
+Geolocation Integration:
+Utilize the device's geolocation capabilities to tag each image with its location (latitude and longitude).
+Display a map in the application that shows the locations of all images on the gallery.
+SQLite Database:
+Use SQLite to store image metadata, including file paths, timestamps, and geolocation data.
+Implement CRUD operations (Create, Read, Update, Delete) for managing image data in the SQLite database.
+User Interface:
+Design a user-friendly interface for browsing images and interacting with the map.
+Include features like pinch-to-zoom for images and map, as well as swipe gestures for navigation.
+Map Integration:
+Integrate a map component (e.g., Google Maps, Mapbox) to display image locations.
+Use markers or other visual indicators on the map to show where each image was taken.
+Search and Filter:
+Provide search functionality to allow users to search for images based on location, date, or other metadata.
+Implement filtering options to view images based on specific criteria (e.g., location, date range).
+Security and Permissions:
+Ensure that the application requests and handles necessary permissions for accessing geolocation data and storing images.
+Implement security measures to protect user data stored in the SQLite database.
+Testing:
+Test the application thoroughly to ensure that geolocation tagging and SQLite functionality work as expected.
+Conduct performance testing to ensure the application performs well, especially when handling a large number of images.
+Documentation:
+Provide comprehensive documentation for the application, including a user guide and developer documentation for future maintenance and updates.
+Presentation:
+Prepare a presentation to demonstrate the features and functionality of the gallery application, highlighting the use of geolocation and SQLite.

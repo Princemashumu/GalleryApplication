@@ -1,20 +1,28 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+// App.js
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createDrawerNavigator } from '@react-navigation/drawer';
+import { DrawerContent } from './components/DrawerContent'; // Import your custom DrawerContent
 
-export default function App() {
+// Import your screens
+import HomeScreen from './screens/HomeScreen';
+import DeletedPhotosScreen from './screens/DeletedPhotosScreen';
+import CameraScreen from './screens/CameraScreen';
+
+const Drawer = createDrawerNavigator();
+
+const App = () => {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Drawer.Navigator
+        drawerContent={(props) => <DrawerContent {...props} />} // Pass navigation props to DrawerContent
+      >
+        <Drawer.Screen name="Camera" component={CameraScreen} />
+        <Drawer.Screen name="HomeScreen" component={HomeScreen} />
+        <Drawer.Screen name="Deleted Photos" component={DeletedPhotosScreen} />
+      </Drawer.Navigator>
+    </NavigationContainer>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App;
