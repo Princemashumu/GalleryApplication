@@ -1,5 +1,3 @@
-// components/DrawerContent.js
-
 import React from 'react';
 import { View, Text, StyleSheet, Linking } from 'react-native';
 import { Drawer } from 'react-native-paper'; // for the drawer layout
@@ -9,8 +7,9 @@ export const DrawerContent = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Drawer.Section title="">
-        <Drawer.Item label="Camera" onPress={() => navigation.navigate('CameraScreen')} />
-        <Drawer.Item label="Photos" onPress={() => navigation.navigate('HomeScreen')} />
+        {/* Camera screen item added here */}
+        <Drawer.Item label="Camera" onPress={() => navigation.navigate('Camera')} />
+        <Drawer.Item label="Gallery" onPress={() => navigation.navigate('HomeScreen')} />
         <Drawer.Item label="Deleted Photos" onPress={() => navigation.navigate('Deleted Photos')} />
       </Drawer.Section>
 

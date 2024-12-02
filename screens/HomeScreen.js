@@ -14,7 +14,6 @@ const HomeScreen = () => {
 
   // Handler to close the modal
   const closeModal = () => {
-    console.log("Close modal triggered"); // Debugging line
     setModalVisible(false);  // Hide modal
     setSelectedImage(null);  // Reset selected image
   };
@@ -67,10 +66,11 @@ const HomeScreen = () => {
         animationType="fade"
         onRequestClose={closeModal}  // Close the modal when pressing back
       >
+        
         <View style={styles.modalContainer}>
-        <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+          <TouchableOpacity onRequestClose={closeModal}  style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
           <Image
             source={selectedImage}
             style={styles.fullScreenImage}  // Full-screen style for the image

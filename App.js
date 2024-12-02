@@ -1,4 +1,3 @@
-// App.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -17,9 +16,10 @@ const App = () => {
       <Drawer.Navigator
         drawerContent={(props) => <DrawerContent {...props} />} // Pass navigation props to DrawerContent
       >
-        <Drawer.Screen name="Camera" component={CameraScreen} />
-        <Drawer.Screen name="HomeScreen" component={HomeScreen} />
+        <Drawer.Screen name="Gallery" component={HomeScreen} />
         <Drawer.Screen name="Deleted Photos" component={DeletedPhotosScreen} />
+        {/* Add the Camera screen to the Drawer */}
+        <Drawer.Screen name="Camera" component={CameraScreen} />
       </Drawer.Navigator>
     </NavigationContainer>
   );
