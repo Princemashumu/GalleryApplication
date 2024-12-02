@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity, TextInput } from 'react-native';
+import { Ionicons } from 'react-native-vector-icons';
+import ImagePicker from 'react-native-image-picker';
 
-// Declare 'images' array
 const images = Array.from({ length: 30 }, (_, index) => ({
   id: `${index + 1}`,
   uri: { uri: `https://via.placeholder.com/150?text=Image+${index + 1}` },
@@ -11,7 +12,7 @@ const images = Array.from({ length: 30 }, (_, index) => ({
 
 const HomeScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0); // Track selected image index
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredImages, setFilteredImages] = useState(images);
 
@@ -20,10 +21,7 @@ const HomeScreen = () => {
     setModalVisible(true);
   };
 
-  const closeModal = () => {
-    setModalVisible(false);
-    setSelectedIndex(0);
-  };
+  const closeModal = () => setModalVisible(false);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -33,6 +31,21 @@ const HomeScreen = () => {
         image.location.toLowerCase().includes(lowerQuery) || image.date.includes(query)
     );
     setFilteredImages(filtered);
+  };
+
+  const handleAddImage = () => {
+    ImagePicker.launchImageLibrary({}, (response) => {
+      if (response.didCancel) return;
+      if (response.assets) {
+        const newImage = {
+          id: `${images.length + 1}`,
+          uri: { uri: response.assets[0].uri },
+          location: 'Unknown',
+          date: new Date().toISOString().split('T')[0],
+        };
+        setFilteredImages((prev) => [newImage, ...prev]);
+      }
+    });
   };
 
   const renderItem = ({ item, index }) => (
@@ -80,6 +93,9 @@ const HomeScreen = () => {
           showsHorizontalScrollIndicator={false}
         />
       </Modal>
+      <TouchableOpacity style={styles.floatingButton} onPress={handleAddImage}>
+        <Ionicons name="add-circle" size={60} color="#007bff" />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -91,12 +107,19 @@ const styles = StyleSheet.create({
   gridImage: { width: 120, height: 120 },
   imageMetadata: { fontSize: 12, textAlign: 'center', color: '#555' },
   noSpaceColumnWrapper: { justifyContent: 'space-between' },
-  modalContainer: { flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' },
-  closeButton: { position: 'absolute', top: 40, right: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 20 },
+  closeButton: { position: 'absolute', top: 40, right: 20, padding: 10 },
   closeButtonText: { color: 'white', fontSize: 16 },
   fullScreenImage: { width: '100%', height: '100%', resizeMode: 'contain' },
   imageSlide: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
   emptyText: { textAlign: 'center', marginTop: 20, fontSize: 16, color: '#777' },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: 'transparent',
+    borderRadius: 30,
+    elevation: 5,
+  },
 });
 
 export default HomeScreen;
