@@ -36,7 +36,8 @@
           "microphonePermission": "Allow Galleryto access your microphone",
           "recordAudioAndroid": true
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
