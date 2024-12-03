@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity, TextInput } from 'react-native';
-
-// Declare 'images' array
-const images = Array.from({ length: 30 }, (_, index) => ({
-  id: `${index + 1}`,
-  uri: { uri: `https://via.placeholder.com/150?text=Image+${index + 1}` },
-  location: index % 2 === 0 ? 'Beach' : 'Mountain',
-  date: `2024-12-${String(index + 1).padStart(2, '0')}`,
-}));
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { openDatabase, createTable, getAllImages } from '../database/db'; // Import database functions
 
 const HomeScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0); // Track selected image index
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredImages, setFilteredImages] = useState(images);
+  const [images, setImages] = useState([]);
+  const [filteredImages, setFilteredImages] = useState([]);
+  const [db, setDb] = useState(null); // Store the database instance
+
+  // Fetch images when the component mounts
+  useEffect(() => {
+    const initializeDatabase = async () => {
+      const database = openDatabase();
+      setDb(database);
+      createTable(database); // Ensure the images table exists
+
+      // Fetch all images after creating the table
+      getAllImages(database, (fetchedImages) => {
+        console.log('Fetched images:', fetchedImages); // Log the fetched images
+        setImages(fetchedImages);
+        setFilteredImages(fetchedImages); // Initially show all images
+      });
+    };
+
+    initializeDatabase();
+  }, []);
 
   const handleImageClick = (index) => {
     setSelectedIndex(index);
@@ -30,22 +43,25 @@ const HomeScreen = () => {
     const lowerQuery = query.toLowerCase();
     const filtered = images.filter(
       (image) =>
-        image.location.toLowerCase().includes(lowerQuery) || image.date.includes(query)
+        image.timestamp.toLowerCase().includes(lowerQuery) || // Assuming 'timestamp' is a searchable field
+        image.latitude.toString().includes(query) || // You can adjust to match your criteria
+        image.longitude.toString().includes(query)
     );
+    console.log('Filtered images:', filtered); // Log the filtered images
     setFilteredImages(filtered);
   };
 
   const renderItem = ({ item, index }) => (
     <TouchableOpacity onPress={() => handleImageClick(index)} style={styles.gridImageContainer}>
-      <Image source={item.uri} style={styles.gridImage} />
-      <Text style={styles.imageMetadata}>{item.location}</Text>
-      <Text style={styles.imageMetadata}>{item.date}</Text>
+      <Image source={{ uri: item.path }} style={styles.gridImage} />
+      <Text style={styles.imageMetadata}>{item.timestamp}</Text>
+      <Text style={styles.imageMetadata}>{`Lat: ${item.latitude}, Long: ${item.longitude}`}</Text>
     </TouchableOpacity>
   );
 
   const renderFullImage = ({ item }) => (
     <View style={styles.imageSlide}>
-      <Image source={item.uri} style={styles.fullScreenImage} />
+      <Image source={{ uri: item.path }} style={styles.fullScreenImage} />
     </View>
   );
 
@@ -53,19 +69,23 @@ const HomeScreen = () => {
     <View style={styles.container}>
       <TextInput
         style={styles.searchInput}
-        placeholder="Search by location or date (YYYY-MM-DD)"
+        placeholder="Search by timestamp, latitude, or longitude"
         value={searchQuery}
         onChangeText={handleSearch}
       />
-      <FlatList
-        data={filteredImages}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        columnWrapperStyle={styles.noSpaceColumnWrapper}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={<Text style={styles.emptyText}>No images found</Text>}
-      />
+      {images.length === 0 ? (
+        <Text style={styles.emptyText}>Loading images...</Text> // Show a loading message while images are being fetched
+      ) : (
+        <FlatList
+          data={filteredImages}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={3}
+          columnWrapperStyle={styles.noSpaceColumnWrapper}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={<Text style={styles.emptyText}>No images found</Text>}
+        />
+      )}
       <Modal visible={modalVisible} transparent={false} animationType="fade" onRequestClose={closeModal}>
         <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
           <Text style={styles.closeButtonText}>X</Text>
@@ -75,7 +95,7 @@ const HomeScreen = () => {
           horizontal
           pagingEnabled
           initialScrollIndex={selectedIndex}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={renderFullImage}
           showsHorizontalScrollIndicator={false}
         />

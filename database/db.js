@@ -1,82 +1,51 @@
-import SQLite from 'react-native-sqlite-storage';
+import * as SQLite from 'expo-sqlite';
 
-// Enable promise support
-SQLite.enablePromise(true);
-
-// Open a database
-export const openDatabase = async () => {
-  try {
-    const db = await SQLite.openDatabase({ name: 'images.db', location: 'default' });
-    return db;
-  } catch (error) {
-    console.error('Failed to open database:', error);
-  }
+// Open a database (create it if it doesn't exist)
+export const openDatabase = () => {
+  const db = SQLite.openDatabase('myDatabase.db'); // 'myDatabase.db' is the database name
+  return db;
 };
 
-// Create table for storing images
-export const createTable = async (db) => {
-  try {
-    await db.executeSql(
-      `CREATE TABLE IF NOT EXISTS images (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        path TEXT,
-        timestamp TEXT,
-        latitude REAL,
-        longitude REAL
-      );`
+// Function to create a table if it doesn't exist
+export const createTable = (db) => {
+  db.transaction(tx => {
+    tx.executeSql(
+      `CREATE TABLE IF NOT EXISTS images (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, timestamp TEXT, latitude REAL, longitude REAL);`
     );
-    console.log('Table created successfully');
-  } catch (error) {
-    console.error('Error creating table:', error);
-  }
+  });
 };
 
-// Insert an image record
-export const insertImage = async (db, image) => {
-  try {
-    await db.executeSql(
+// Function to insert an image record into the table
+export const insertImage = (db, image) => {
+  const { path, timestamp, latitude, longitude } = image;
+  db.transaction(tx => {
+    tx.executeSql(
       `INSERT INTO images (path, timestamp, latitude, longitude) VALUES (?, ?, ?, ?)`,
-      [image.path, image.timestamp, image.latitude, image.longitude]
+      [path, timestamp, latitude, longitude],
+      (_, result) => {
+        console.log("Image inserted", result);
+      },
+      (_, error) => {
+        console.error("Error inserting image", error);
+        return false;
+      }
     );
-    console.log('Image inserted successfully');
-  } catch (error) {
-    console.error('Error inserting image:', error);
-  }
+  });
 };
 
-// Fetch all images
-export const fetchImages = async (db) => {
-  try {
-    const results = await db.executeSql('SELECT * FROM images');
-    return results[0].rows.raw();
-  } catch (error) {
-    console.error('Error fetching images:', error);
-    return [];
-  }
-};
-
-// Update an image record
-export const updateImage = async (db, id, newPath) => {
-  try {
-    await db.executeSql(
-      `UPDATE images SET path = ? WHERE id = ?`,
-      [newPath, id]
+// Function to fetch all images from the database
+export const getAllImages = (db, callback) => {
+  db.transaction(tx => {
+    tx.executeSql(
+      `SELECT * FROM images`,
+      [],
+      (_, result) => {
+        callback(result.rows._array);
+      },
+      (_, error) => {
+        console.error("Error fetching images", error);
+        return false;
+      }
     );
-    console.log('Image updated successfully');
-  } catch (error) {
-    console.error('Error updating image:', error);
-  }
-};
-
-// Delete an image by ID
-export const deleteImage = async (db, id) => {
-  try {
-    await db.executeSql(
-      `DELETE FROM images WHERE id = ?`,
-      [id]
-    );
-    console.log('Image deleted successfully');
-  } catch (error) {
-    console.error('Error deleting image:', error);
-  }
+  });
 };
