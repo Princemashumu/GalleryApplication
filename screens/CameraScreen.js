@@ -1,18 +1,13 @@
-import React, { useEffect, useState ,useRef} from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons'; // For the camera icon
 import { Image } from 'react-native';
-import { openDatabase, createTable, insertImage, fetchImages } from './db'; // Import the db functions
-
 
 const CameraScreen = () => {
   const [permission, requestPermission] = useCameraPermissions(); // Use hook to get and request camera permissions
   const [photo, setPhoto] = useState(null); // State to store captured photo
   const cameraRef = useRef(null); // Reference to the camera component
-  const dbRef = useRef(null);
-
-
 
   useEffect(() => {
     if (permission && !permission.granted) {
@@ -21,7 +16,7 @@ const CameraScreen = () => {
   }, [permission]);
 
   if (!permission) {
-    return <Text>Requesting permission...</Text>; // Show loading message while permission is being checked
+    return <Text>Please Allow Camera Access</Text>; // Show loading message while permission is being checked
   }
 
   if (!permission.granted) {
@@ -44,6 +39,7 @@ const CameraScreen = () => {
       </View>
     );
   }
+
   const handleCapture = async () => {
     if (cameraRef.current) {
       const photoData = await cameraRef.current.takePictureAsync();
@@ -54,28 +50,18 @@ const CameraScreen = () => {
   const handleClose = () => {
     setPhoto(null); // Reset the photo state when the close button is pressed
   };
-// Open database and create table
-    const initializeDb = async () => {
-      const db = await openDatabase();
-      dbRef.current = db;
-      await createTable(db);
-      fetchStoredImages(db);
-    };
-
-    initializeDb();
-
-    return () => {
-      dbRef.current && dbRef.current.close(); // Close the DB when component unmounts
-    };
-  }, [permission];
 
   // Once permission is granted, show the camera
   return (
     <View style={styles.container}>
       {photo ? (
         // Display the captured image
-        <Image source={{ uri: photo }} style={styles.capturedImage} />
-        
+        <View style={styles.capturedImageContainer}>
+          <Image source={{ uri: photo }} style={styles.capturedImage} />
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <Ionicons name="close" size={30} color="white" />
+          </TouchableOpacity>
+        </View>
       ) : (
         // Display the camera if no photo has been taken
         <CameraView style={styles.camera} ref={cameraRef}>
@@ -103,7 +89,6 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
     width: '100%',
-
   },
   message: {
     textAlign: 'center',
@@ -133,11 +118,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  capturedImageContainer: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   capturedImage: {
-    flex:1,
+    flex: 1,
     width: '100%',
     height: '100%',
     resizeMode: 'contain',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 50,
+    padding: 10,
   },
   captureButton: {
     backgroundColor: 'red',
