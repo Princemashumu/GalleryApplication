@@ -1,40 +1,30 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Ionicons } from '@expo/vector-icons'; // For the camera icon
-import { Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { CameraView, useCameraPermissions,CameraType  } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons'; // For icons
 
 const CameraScreen = () => {
-  const [permission, requestPermission] = useCameraPermissions(); // Use hook to get and request camera permissions
-  const [photo, setPhoto] = useState(null); // State to store captured photo
-  const cameraRef = useRef(null); // Reference to the camera component
+  const [permission, requestPermission] = useCameraPermissions();
+  const [photo, setPhoto] = useState(null);
+  const [cameraType, setCameraType] = useState('back'); // Default to back camera
+  const cameraRef = useRef(null);
 
   useEffect(() => {
     if (permission && !permission.granted) {
-      requestPermission(); // Request permission on initial load if not granted
+      requestPermission();
     }
   }, [permission]);
 
   if (!permission) {
-    return <Text>Please Allow Camera Access</Text>; // Show loading message while permission is being checked
+    return <Text>Requesting Camera Permissions...</Text>;
   }
 
   if (!permission.granted) {
-    // If permission is not granted, show a message with buttons to request permission
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>Allow</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.button} onPress={() => alert("You can select 'Allow only this time' in the settings.")}>
-          <Text style={styles.buttonText}>Allow only this time</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.denyButton} onPress={() => alert("Camera access denied.")}>
-          <Text style={styles.buttonText}>Deny Access</Text>
+      <View style={styles.permissionContainer}>
+        <Text style={styles.permissionText}>Camera access is required</Text>
+        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+          <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
     );
@@ -43,34 +33,36 @@ const CameraScreen = () => {
   const handleCapture = async () => {
     if (cameraRef.current) {
       const photoData = await cameraRef.current.takePictureAsync();
-      setPhoto(photoData.uri); // Store the captured photo URI in the state
+      setPhoto(photoData.uri);
     }
   };
 
-  const handleClose = () => {
-    setPhoto(null); // Reset the photo state when the close button is pressed
-  };
+  const toggleCameraType = () => {
+  setCameraType((current) =>
+    current === Camera.Constants.Type.back ? Camera.Constants.Type.front : Camera.Constants.Type.back
+  );
+};
 
-  // Once permission is granted, show the camera
+
+  const handleClosePhoto = () => setPhoto(null);
+
   return (
     <View style={styles.container}>
       {photo ? (
-        // Display the captured image
-        <View style={styles.capturedImageContainer}>
-          <Image source={{ uri: photo }} style={styles.capturedImage} />
-          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <Ionicons name="close" size={30} color="white" />
+        <View style={styles.photoContainer}>
+          <Image source={{ uri: photo }} style={styles.photo} />
+          <TouchableOpacity style={styles.closeButton} onPress={handleClosePhoto}>
+            <Ionicons name="close" size={40} color="white" />
           </TouchableOpacity>
         </View>
       ) : (
-        // Display the camera if no photo has been taken
-        <CameraView style={styles.camera} ref={cameraRef}>
-          <View style={styles.captureButtonContainer}>
-            <TouchableOpacity
-              style={styles.captureButton}
-              onPress={handleCapture}
-            >
-              <Ionicons name="camera" size={30} color="white" />
+        <CameraView style={styles.camera} cameraType={cameraType} type={cameraType} ref={cameraRef}>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.iconButton} onPress={toggleCameraType}>
+              {/* <Ionicons name="camera-reverse-outline" size={40} color="white" /> */}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
+              <Ionicons name="camera" size={40} color="white" />
             </TouchableOpacity>
           </View>
         </CameraView>
@@ -82,77 +74,67 @@ const CameraScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'black',
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
   camera: {
     flex: 1,
-    width: '100%',
   },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 20,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  button: {
-    backgroundColor: '#007bff',
-    padding: 15,
-    borderRadius: 8,
-    marginVertical: 10,
-    width: '80%',
-    alignItems: 'center',
-  },
-  denyButton: {
-    backgroundColor: '#dc3545',
-    padding: 15,
-    borderRadius: 8,
-    marginVertical: 10,
-    width: '80%',
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  capturedImageContainer: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  capturedImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  closeButton: {
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    bottom: 40,
+    width: '100%',
+  },
+  iconButton: {
+    // backgroundColor: 'red',
+    padding: 20,
     borderRadius: 50,
-    padding: 10,
+    // left:'45%',
+   
   },
   captureButton: {
     backgroundColor: 'red',
-    borderRadius: 50, // Circular button
-    width: 70,
-    height: 70,
+    padding: 20,
+    borderRadius: 50,
+    right:"40%"
+    
+  },
+  photoContainer: {
+    flex: 1,
+  },
+  photo: {
+    flex: 1,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    backgroundColor: 'black',
+    padding: 10,
+    borderRadius: 50,
+  },
+  permissionContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  captureButtonContainer: {
-    position: 'absolute',
-    bottom: 40, // Position the button at the bottom of the camera
-    left: '50%',
-    marginLeft: -35, // To center it
-    justifyContent: 'center',
-    alignItems: 'center',
+  permissionText: {
+    textAlign: 'center',
+    color: 'white',
+    fontSize: 18,
+    marginBottom: 20,
+  },
+  permissionButton: {
+    backgroundColor: 'blue',
+    padding: 10,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
   },
 });
 
