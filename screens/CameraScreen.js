@@ -1,136 +1,128 @@
-// import React, { useState, useEffect } from 'react';
-// import { View, Text, Button, StyleSheet, Image } from 'react-native';
-// import { RNCamera } from 'react-native-camera';
-// import { PermissionsAndroid, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons'; // For the camera icon
 
-// const CameraScreen = () => {
-//   const [hasPermission, setHasPermission] = useState(null);
-//   const [photo, setPhoto] = useState(null);
-
-//   useEffect(() => {
-//     (async () => {
-//       if (Platform.OS === 'android') {
-//         const granted = await PermissionsAndroid.request(
-//           PermissionsAndroid.PERMISSIONS.CAMERA,
-//           {
-//             title: 'Camera Permission',
-//             message: 'App needs camera access to take photos',
-//             buttonNeutral: 'Ask Me Later',
-//             buttonNegative: 'Cancel',
-//             buttonPositive: 'OK',
-//           }
-//         );
-//         setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
-//       } else {
-//         // For iOS, permissions are requested automatically
-//         setHasPermission(true);
-//       }
-//     })();
-//   }, []);
-
-//   let camera;
-
-//   const takePhoto = async () => {
-//     if (camera) {
-//       const options = { quality: 0.5, base64: true };
-//       const data = await camera.takePictureAsync(options);
-//       setPhoto(data.uri);
-//     }
-//   };
-
-//   if (hasPermission === null) {
-//     return <Text>Requesting camera permission...</Text>;
-//   }
-
-//   if (!hasPermission) {
-//     return <Text>No access to camera. Please enable it in settings.</Text>;
-//   }
-
-//   return (
-//     <View style={styles.container}>
-//       <RNCamera
-//         style={styles.camera}
-//         ref={(ref) => {
-//           camera = ref;
-//         }}
-//         type={RNCamera.Constants.Type.back}
-//         captureAudio={false}
-//       >
-//         <View style={styles.buttonContainer}>
-//           <Button title="Take Photo" onPress={takePhoto} />
-//         </View>
-//       </RNCamera>
-//       {photo && (
-//         <View style={styles.photoContainer}>
-//           <Image source={{ uri: photo }} style={styles.photo} />
-//         </View>
-//       )}
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1 },
-//   camera: { flex: 1 },
-//   buttonContainer: {
-//     flex: 0.1,
-//     flexDirection: 'row',
-//     justifyContent: 'center',
-//     marginBottom: 20,
-//   },
-//   photoContainer: { marginTop: 20 },
-//   photo: { width: 300, height: 300, borderRadius: 10 },
-// });
-
-// export default CameraScreen;
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Button, StyleSheet, Image } from 'react-native';
-import { Camera } from 'expo-camera';
 
 const CameraScreen = () => {
-  const [hasPermission, setHasPermission] = useState(null);
-  const [photo, setPhoto] = useState(null);
-  const cameraRef = useRef(null);
+  const [permission, requestPermission] = useCameraPermissions(); // Use hook to get and request camera permissions
 
   useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+    if (permission && !permission.granted) {
+      requestPermission(); // Request permission on initial load if not granted
+    }
+  }, [permission]);
 
-  const takePhoto = async () => {
+  if (!permission) {
+    return <Text>Requesting permission...</Text>; // Show loading message while permission is being checked
+  }
+
+  if (!permission.granted) {
+    // If permission is not granted, show a message with buttons to request permission
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>We need your permission to show the camera</Text>
+        
+        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+          <Text style={styles.buttonText}>Allow</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.button} onPress={() => alert("You can select 'Allow only this time' in the settings.")}>
+          <Text style={styles.buttonText}>Allow only this time</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.denyButton} onPress={() => alert("Camera access denied.")}>
+          <Text style={styles.buttonText}>Deny Access</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  const handleCapture = async () => {
     if (cameraRef.current) {
       const photoData = await cameraRef.current.takePictureAsync();
-      setPhoto(photoData.uri); // Store the photo URI
+      setPhoto(photoData.uri); // Store the captured photo URI in the state
     }
   };
-
-  if (hasPermission === null) {
-    return <Text>Requesting permission...</Text>;
-  }
-  if (hasPermission === false) {
-    return <Text>No access to camera</Text>;
-  }
-
+  // Once permission is granted, show the camera
   return (
     <View style={styles.container}>
-      <Camera style={styles.camera} ref={cameraRef} />
-      <Button title="Capture" onPress={takePhoto} />
-      {photo && (
-        <View style={styles.photoContainer}>
-          <Image source={{ uri: photo }} style={styles.photo} />
-        </View>
-      )}
+      <CameraView style={styles.camera}>
+        {/* Camera content goes here */}
+        <View style={styles.captureButtonContainer}>
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={handleCapture}
+            >
+              <Ionicons name="camera" size={30} color="white" />
+            </TouchableOpacity>
+          </View>
+      </CameraView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  camera: { flex: 0.7 },
-  photoContainer: { marginTop: 20, alignItems: 'center' },
-  photo: { width: 300, height: 300, borderRadius: 10 },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  camera: {
+    flex: 1,
+    width: '100%',
+
+  },
+  message: {
+    textAlign: 'center',
+    paddingBottom: 20,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  denyButton: {
+    backgroundColor: '#dc3545',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  capturedImage: {
+    flex:1,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  captureButton: {
+    backgroundColor: 'red',
+    borderRadius: 50, // Circular button
+    width: 70,
+    height: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  captureButtonContainer: {
+    position: 'absolute',
+    bottom: 40, // Position the button at the bottom of the camera
+    left: '50%',
+    marginLeft: -35, // To center it
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 export default CameraScreen;

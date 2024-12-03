@@ -8,19 +8,36 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.gallryapplication",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires access to your camera to take pictures."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "CAMERA"
+      ]
     },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Gallery to access your camera",
+          "microphonePermission": "Allow Galleryto access your microphone",
+          "recordAudioAndroid": true
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }
