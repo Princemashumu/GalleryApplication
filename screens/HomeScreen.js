@@ -184,7 +184,7 @@ const confirmDeleteImage = (image) => {
           color="#0000ff" 
           style={styles.loader}
         />
-        <Text style={styles.loadingText}>Loading images...</Text>
+        {/* <Text style={styles.loadingText}>Loading images...</Text> */}
       </View>
     );
   }
