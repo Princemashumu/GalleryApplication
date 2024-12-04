@@ -1,13 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { CameraView, useCameraPermissions,CameraType  } from 'expo-camera';
+import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons'; // For icons
+import * as FileSystem from 'expo-file-system'; // For reading the image file as base64
+import { openDatabaseAsync, insertImage } from '../database/db'; // Import your database functions
 
 const CameraScreen = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const [photo, setPhoto] = useState(null);
   const [cameraType, setCameraType] = useState('back'); // Default to back camera
   const cameraRef = useRef(null);
+  const [db, setDb] = useState(null);
 
   useEffect(() => {
     if (permission && !permission.granted) {
@@ -15,6 +18,15 @@ const CameraScreen = () => {
     }
   }, [permission]);
 
+  useEffect(() => {
+    const initializeDatabase = async () => {
+      const database = await openDatabaseAsync(); // Initialize the database
+      setDb(database);
+    };
+    initializeDatabase();
+  }, []);
+
+  
   if (!permission) {
     return <Text>Requesting Camera Permissions...</Text>;
   }
@@ -38,13 +50,49 @@ const CameraScreen = () => {
   };
 
   const toggleCameraType = () => {
-  setCameraType((current) =>
-    current === Camera.Constants.Type.back ? Camera.Constants.Type.front : Camera.Constants.Type.back
-  );
-};
-
+    setCameraType((current) =>
+      current === Camera.Constants.Type.back ? Camera.Constants.Type.front : Camera.Constants.Type.back
+    );
+  };
 
   const handleClosePhoto = () => setPhoto(null);
+
+  // Function to upload the image to the SQLite database
+  const uploadImage = async (uri) => {
+    if (!db) {
+      console.error('Database not initialized');
+      return;
+    }
+
+    try {
+      // Convert the image to base64
+      const base64Image = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Prepare the image data to insert into the database
+      const imageData = {
+        base64: base64Image,
+        timestamp: new Date().toISOString(),
+        latitude: 0, // Add actual latitude here (use geolocation)
+        longitude: 0, // Add actual longitude here (use geolocation)
+      };
+
+      // Insert the image data into the database
+      insertImage(db, imageData);
+      console.log('Image uploaded to database successfully!');
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    }
+  };
+
+  const handleUpload = () => {
+    if (photo) {
+      uploadImage(photo);
+      setPhoto(null); // Optionally clear the photo after upload
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -54,12 +102,16 @@ const CameraScreen = () => {
           <TouchableOpacity style={styles.closeButton} onPress={handleClosePhoto}>
             <Ionicons name="close" size={40} color="white" />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
+            <Ionicons name="cloud-upload-outline" size={40} color="white" />
+            <Text style={styles.uploadText}>Upload</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <CameraView style={styles.camera} cameraType={cameraType} type={cameraType} ref={cameraRef}>
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.iconButton} onPress={toggleCameraType}>
-              {/* <Ionicons name="camera-reverse-outline" size={40} color="white" /> */}
+              {/* Icon for switching camera */}
             </TouchableOpacity>
             <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
               <Ionicons name="camera" size={40} color="white" />
@@ -89,18 +141,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   iconButton: {
-    // backgroundColor: 'red',
     padding: 20,
     borderRadius: 50,
-    // left:'45%',
-   
   },
   captureButton: {
     backgroundColor: 'red',
     padding: 20,
     borderRadius: 50,
-    right:"40%"
-    
   },
   photoContainer: {
     flex: 1,
@@ -115,6 +162,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
     padding: 10,
     borderRadius: 50,
+  },
+  uploadButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: '50%',
+    transform: [{ translateX: -50 }],
+    backgroundColor: 'blue',
+    padding: 15,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadText: {
+    color: 'white',
+    fontSize: 16,
   },
   permissionContainer: {
     flex: 1,

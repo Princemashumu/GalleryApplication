@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { DrawerContent } from './components/DrawerContent'; // Custom DrawerContent
@@ -6,10 +6,14 @@ import HomeScreen from './screens/HomeScreen';
 import DeletedPhotosScreen from './screens/DeletedPhotosScreen';
 import CameraScreen from './screens/CameraScreen';
 import LocationScreen from './screens/LocationScreen'; // Import LocationScreen
+import * as SQLite from 'expo-sqlite';
 
 const Drawer = createDrawerNavigator();
 
 const App = () => {
+
+ 
+
   return (
     <NavigationContainer>
       <Drawer.Navigator
