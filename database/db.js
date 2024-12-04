@@ -56,14 +56,14 @@ export const insertImage = async (db, image) => {
   }
 
   const { base64, timestamp, latitude, longitude } = image;
-  console.log('Inserting image with data:', image);
+  // console.log('Inserting image with data:', image);
 
   try {
     const result = await db.runAsync(
       'INSERT INTO images (base64, timestamp, latitude, longitude) VALUES (?, ?, ?, ?)', 
       [base64, timestamp, latitude, longitude]
     );
-    console.log('Image inserted with ID', result.lastInsertRowId);
+    // console.log('Image inserted with ID', result.lastInsertRowId);
     return result;
   } catch (error) {
     console.error('Error inserting image', error);
@@ -88,7 +88,7 @@ export const updateImage = async (db, id, updatedData) => {
       'UPDATE images SET base64 = ?, timestamp = ?, latitude = ?, longitude = ? WHERE id = ?', 
       [updatedData.base64, updatedData.timestamp, updatedData.latitude, updatedData.longitude, id]
     );
-    console.log('Image updated', result.rowsAffected);
+    // console.log('Image updated', result.rowsAffected);
     return result;
   } catch (error) {
     console.error('Error updating image', error);

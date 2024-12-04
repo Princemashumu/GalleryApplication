@@ -1,71 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity, TextInput } from 'react-native';
-import { openDatabaseAsync, getAllImages } from '../database/db';
+import React, { useState, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  Image, 
+  Modal, 
+  TouchableOpacity, 
+  TextInput, 
+  ActivityIndicator,
+  Alert
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { openDatabaseAsync, getAllImages, deleteImage } from '../database/db';
 import * as FileSystem from 'expo-file-system';
 
 const HomeScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null); // store selected image
+  const [selectedImage, setSelectedImage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [images, setImages] = useState([]);
   const [filteredImages, setFilteredImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Initialize database and fetch images
-  useEffect(() => {
-    const initializeDatabase = async () => {
-      try {
-        setIsLoading(true);
-        const database = await openDatabaseAsync();
-        
-        const fetchedImages = await getAllImages(database);
-        console.log('Fetched images:', fetchedImages);
+  // Function to initialize database and fetch images
+  const initializeDatabase = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const database = await openDatabaseAsync();
+      
+      const fetchedImages = await getAllImages(database);
+      console.log('Fetched images:', fetchedImages);
 
-        if (fetchedImages && fetchedImages.length > 0) {
-          // Process and save images
-          const processedImages = await Promise.all(fetchedImages.map(async (image) => {
-            const base64 = image.base64.startsWith('data:image') 
-              ? image.base64 
-              : `data:image/jpeg;base64,${image.base64}`;
-            const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
-            const fileUri = `${FileSystem.documentDirectory}image_${image.id}.jpg`;
+      if (fetchedImages && fetchedImages.length > 0) {
+        // Process and save images
+        const processedImages = await Promise.all(fetchedImages.map(async (image) => {
+          const base64 = image.base64.startsWith('data:image') 
+            ? image.base64 
+            : `data:image/jpeg;base64,${image.base64}`;
+          const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
+          const fileUri = `${FileSystem.documentDirectory}image_${image.id}.jpg`;
 
-            try {
-              await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-                encoding: FileSystem.EncodingType.Base64
-              });
+          try {
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64
+            });
 
-              return {
-                ...image,
-                base64: fileUri,
-                localUri: fileUri
-              };
-            } catch (fileError) {
-              console.error('Error saving image file:', fileError);
-              return {
-                ...image,
-                base64: base64,
-                localUri: null
-              };
-            }
-          }));
+            return {
+              ...image,
+              base64: fileUri,
+              localUri: fileUri
+            };
+          } catch (fileError) {
+            console.error('Error saving image file:', fileError);
+            return {
+              ...image,
+              base64: base64,
+              localUri: null
+            };
+          }
+        }));
 
-          setImages(processedImages);
-          setFilteredImages(processedImages);
-        } else {
-          console.log('No images found in the database');
-        }
-      } catch (error) {
-        console.error('Error initializing database:', error);
-        setError('Failed to load images');
-      } finally {
-        setIsLoading(false);
+        setImages(processedImages);
+        setFilteredImages(processedImages);
+      } else {
+        console.log('No images found in the database');
+        setImages([]);
+        setFilteredImages([]);
       }
-    };
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      setError('Failed to load images');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    initializeDatabase();
-  }, []);
+  // Function to handle image deletion
+const handleDeleteImage = async (image) => {
+  try {
+    // Open database
+    const database = await openDatabaseAsync();
+    
+    // Delete image from database
+    await deleteImage(database, image.id);
+    
+    // Remove local file if exists
+    if (image.localUri) {
+      await FileSystem.deleteAsync(image.localUri);
+    }
+    
+    // Refresh images
+    
+    // Show success alert
+    Alert.alert('Success', 'Image deleted successfully');
+    await initializeDatabase();
+
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    Alert.alert('Error', 'Failed to delete image');
+  }
+};
+
+// Confirm delete image
+const confirmDeleteImage = (image) => {
+  Alert.alert(
+    'Delete Image', 
+    'Are you sure you want to delete this image?',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel'
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => handleDeleteImage(image)
+      }
+    ]
+  );
+};
+
+
+  // Use useFocusEffect to reload images every time screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      initializeDatabase();
+    }, [])
+  );
 
   // Handle search
   const handleSearch = (query) => {
@@ -82,8 +146,8 @@ const HomeScreen = () => {
 
   // Handle image click to show in full-screen modal
   const handleImageClick = (image) => {
-    setSelectedImage(image); // Set the selected image
-    setModalVisible(true); // Show the modal
+    setSelectedImage(image);
+    setModalVisible(true);
   };
 
   // Close modal
@@ -97,6 +161,8 @@ const HomeScreen = () => {
     return (
       <TouchableOpacity 
         onPress={() => handleImageClick(item)} 
+        onLongPress={() => confirmDeleteImage(item)}
+        delayLongPress={500} // 500ms long press duration
         style={styles.gridImageContainer}
       >
         <Image 
@@ -109,19 +175,28 @@ const HomeScreen = () => {
     );
   };
 
-  // Render loading or error states
+  // Render loading state
   if (isLoading) {
     return (
       <View style={styles.centeredContainer}>
-        <Text>Loading images...</Text>
+        <ActivityIndicator 
+          size="large" 
+          color="#0000ff" 
+          style={styles.loader}
+        />
+        <Text style={styles.loadingText}>Loading images...</Text>
       </View>
     );
   }
 
+  // Render error state
   if (error) {
     return (
       <View style={styles.centeredContainer}>
         <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={initializeDatabase} style={styles.retryButton}>
+          <Text style={styles.retryButtonText}>Retry Loading</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -134,7 +209,7 @@ const HomeScreen = () => {
         value={searchQuery}
         onChangeText={handleSearch}
       />
-      {images.length === 0 ? (
+      {filteredImages.length === 0 ? (
         <Text style={styles.emptyText}>No images available</Text>
       ) : (
         <FlatList
@@ -170,73 +245,104 @@ const HomeScreen = () => {
   );
 };
 
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   centeredContainer: {
-    flex: 1, 
-    justifyContent: 'center', 
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5'
+    backgroundColor: '#f5f5f5',
   },
   errorText: {
     color: 'red',
-    fontSize: 16
+    fontSize: 16,
   },
   searchInput: {
     height: 40,
     borderColor: '#ccc',
     borderWidth: 1,
-    margin: 5,
+    margin: 10,
     paddingHorizontal: 10,
-    borderRadius: 5,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    elevation: 2,
   },
-  gridImageContainer: { 
-    flex: 1, 
-    margin: 1, 
-    aspectRatio: 1 
+  gridImageContainer: {
+    flex: 1,
+    margin: 5,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  gridImage: { 
-    width: '100%', 
-    height: '100%' 
+  gridImage: {
+    width: '100%',
+    Top:20,
+    height: 150,
+    borderRadius: 10,
   },
-  imageMetadata: { 
-    fontSize: 12, 
-    textAlign: 'center', 
-    color: '#555', 
-    position: 'absolute', 
-    bottom: 0, 
-    left: 0, 
-    right: 0, 
-    backgroundColor: 'rgba(255,255,255,0.7)' 
+  imageMetadata: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#333',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 5,
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
   },
-  noSpaceColumnWrapper: { justifyContent: 'space-between' },
+  noSpaceColumnWrapper: {
+    justifyContent: 'space-between',
+  },
   closeButton: {
     position: 'absolute',
     top: 40,
     right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     padding: 10,
-    borderRadius: 20,
+    borderRadius: 50,
     zIndex: 1,
   },
-  closeButtonText: { color: 'white', fontSize: 16 },
-  fullScreenContainer: {
+  closeButtonText: {
+    color: 'white',
+    fontSize: 18,
+  },
+  fullScreenImage: {
+    // alignContent:"center",
+    width: '100%',
+    height: '100%',
+    resizeMode: 'fill',
+    position: 'relative',
+    backgroundColor: 'rgba(0,0,0,0.9)',
+  },
+  imageSlide: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    width: '100%',
   },
-  fullScreenImage: { 
-    width: '100%', 
-    height: '80%', 
-    resizeMode: 'contain' 
+  imageInfo: {
+    padding: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: '90%',
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
   },
-  emptyText: { 
-    textAlign: 'center', 
-    marginTop: 20, 
-    fontSize: 16, 
-    color: '#777' 
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+    color: '#777',
   },
 });
+
 
 export default HomeScreen;

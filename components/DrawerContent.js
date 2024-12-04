@@ -110,8 +110,8 @@ export const DrawerContent = ({ navigation }) => {
 
       {imageUri && (
         <View style={styles.imageContainer}>
-          <Text style={styles.imageText}>Selected Image:</Text>
-          <Image source={{ uri: imageUri }} style={styles.image} />
+          {/* <Text style={styles.imageText}>Selected Image:</Text>
+          <Image source={{ uri: imageUri }} style={styles.image} /> */}
         </View>
       )}
 
