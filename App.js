@@ -2,8 +2,6 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { DrawerContent } from './components/DrawerContent'; // Custom DrawerContent
-
-// Import your screens
 import HomeScreen from './screens/HomeScreen';
 import DeletedPhotosScreen from './screens/DeletedPhotosScreen';
 import CameraScreen from './screens/CameraScreen';

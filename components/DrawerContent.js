@@ -3,23 +3,32 @@ import { View, Text, StyleSheet, Linking, Alert, Image } from 'react-native';
 import { Drawer } from 'react-native-paper';
 import { MaterialCommunityIcons } from 'react-native-vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location'; // Importing location for image metadata
-import { openDatabase, insertImage } from '../database/db';
+import * as Location from 'expo-location';
+import {openDatabaseAsync ,insertImage } from '../database/db';
+import * as SQLite from 'expo-sqlite';
+import * as FileSystem from 'expo-file-system'; // Import FileSystem
+
 
 export const DrawerContent = ({ navigation }) => {
   const [imageUri, setImageUri] = useState(null);
   const [db, setDb] = useState(null);
-  const [location, setLocation] = useState(null); // State to store location data
+  const [location, setLocation] = useState(null);
+
+  // Open the SQLite database
+  const openDatabaseAsync = async () => {
+    try {
+      const database = await SQLite.openDatabaseAsync('imageDB.db'); // Open or create a database
+      setDb(database);
+      console.log('Database initialized:', database);
+    } catch (error) {
+      console.log('Error initializing database:', error);
+    }
+  };
 
   useEffect(() => {
-    const initializeDatabase = async () => {
-      const database = await openDatabase();
-      setDb(database);
-    };
-    initializeDatabase();
+    openDatabaseAsync(); // Initialize the database when the component mounts
   }, []);
 
-  // Function to fetch location
   const getLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status === 'granted') {
@@ -30,40 +39,62 @@ export const DrawerContent = ({ navigation }) => {
     }
   };
 
-  // Function to handle image selection
-  const selectImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+ const selectImage = async () => {
+  if (!db) {
+    Alert.alert('Error', 'Database not initialized. Please try again.');
+    return;
+  }
 
-    if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'You need to grant permission to access the gallery');
-      return;
-    }
+  // Request permission to access the media library
+  const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permissionResult.granted) {
+    Alert.alert('Permission required', 'You need to grant permission to access the gallery');
+    return;
+  }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaType: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-      allowsEditing: false,
-      selectionLimit: 1,
-    });
+  // Launch the image picker
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaType: ImagePicker.MediaTypeOptions.Images,
+    quality: 1,
+    allowsEditing: false,
+    selectionLimit: 1,
+  });
 
-    if (!result.cancelled) {
-      setImageUri(result.uri);
+  // If the user picked an image, continue processing
+  if (!result.canceled) {
+    const selectedUri = result.assets[0].uri;
+    setImageUri(selectedUri);
 
-      // Fetch location data when selecting an image
-      await getLocation();
+    try {
+      // Convert the selected image URI to base64
+      const base64Image = await FileSystem.readAsStringAsync(selectedUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
+      // Get current location
+      await getLocation(); // Ensure that location is fetched
+
+      // Prepare image data with additional metadata
       const image = {
-        path: result.uri,
+        base64: base64Image,  // Store the base64 string here
         timestamp: new Date().toISOString(),
-        latitude: location?.latitude || 0,
-        longitude: location?.longitude || 0,
+        latitude: location?.latitude || 0,  // Default to 0 if location is unavailable
+        longitude: location?.longitude || 0, // Default to 0 if location is unavailable
       };
 
-      if (db) {
-        await insertImage(db, image);
-      }
+      // Insert the image and metadata into the database
+      await insertImage(db, image);  // Ensure this function is correctly implemented
+
+      // Success feedback
+      Alert.alert('Success', 'Image URI uploaded successfully!');
+    } catch (error) {
+      console.log('Error during image processing or database insertion:', error);
+      Alert.alert('Error', 'Failed to upload image URI.');
     }
-  };
+  } else {
+    console.log('Image selection was canceled');
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -72,9 +103,7 @@ export const DrawerContent = ({ navigation }) => {
         <Drawer.Item label="Gallery" onPress={() => navigation.navigate('Gallery')} />
         <Drawer.Item
           label="Upload Image"
-          icon={() => (
-            <MaterialCommunityIcons name="plus-circle" size={24} color="#000" />
-          )}
+          icon={() => <MaterialCommunityIcons name="plus-circle" size={24} color="#000" />}
           onPress={selectImage}
         />
       </Drawer.Section>

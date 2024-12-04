@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, Modal, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { openDatabase, createTable, getAllImages } from '../database/db'; // Import database functions
+import { openDatabaseAsync, createTable, getAllImages } from '../database/db'; // Import database functions
 
 const HomeScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -13,12 +13,12 @@ const HomeScreen = () => {
   // Fetch images when the component mounts
   useEffect(() => {
     const initializeDatabase = async () => {
-      const database = openDatabase();
+      const database = openDatabaseAsync();
       setDb(database);
       createTable(database); // Ensure the images table exists
 
       // Fetch all images after creating the table
-      getAllImages(database, (fetchedImages) => {
+        getAllImages(database, (fetchedImages) => {
         console.log('Fetched images:', fetchedImages); // Log the fetched images
         setImages(fetchedImages);
         setFilteredImages(fetchedImages); // Initially show all images
