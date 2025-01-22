@@ -14,6 +14,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { openDatabaseAsync, getAllImages, deleteImage } from '../database/db';
 import * as FileSystem from 'expo-file-system';
+import MapView, { Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for map icon
 
 const HomeScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -23,6 +25,7 @@ const HomeScreen = () => {
   const [filteredImages, setFilteredImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isMapVisible, setIsMapVisible] = useState(false); // New state for map visibility
 
   // Function to initialize database and fetch images
   const initializeDatabase = async () => {
@@ -79,50 +82,41 @@ const HomeScreen = () => {
   };
 
   // Function to handle image deletion
-const handleDeleteImage = async (image) => {
-  try {
-    // Open database
-    const database = await openDatabaseAsync();
-    
-    // Delete image from database
-    await deleteImage(database, image.id);
-    
-    // Remove local file if exists
-    if (image.localUri) {
-      await FileSystem.deleteAsync(image.localUri);
-    }
-    
-    // Refresh images
-    
-    // Show success alert
-    Alert.alert('Success', 'Image deleted successfully');
-    await initializeDatabase();
-
-  } catch (error) {
-    console.error('Error deleting image:', error);
-    Alert.alert('Error', 'Failed to delete image');
-  }
-};
-
-// Confirm delete image
-const confirmDeleteImage = (image) => {
-  Alert.alert(
-    'Delete Image', 
-    'Are you sure you want to delete this image?',
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel'
-      },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => handleDeleteImage(image)
+  const handleDeleteImage = async (image) => {
+    try {
+      const database = await openDatabaseAsync();
+      await deleteImage(database, image.id);
+      
+      if (image.localUri) {
+        await FileSystem.deleteAsync(image.localUri);
       }
-    ]
-  );
-};
+      
+      Alert.alert('Success', 'Image deleted successfully');
+      await initializeDatabase();
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      Alert.alert('Error', 'Failed to delete image');
+    }
+  };
 
+  // Confirm delete image
+  const confirmDeleteImage = (image) => {
+    Alert.alert(
+      'Delete Image', 
+      'Are you sure you want to delete this image?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDeleteImage(image)
+        }
+      ]
+    );
+  };
 
   // Use useFocusEffect to reload images every time screen comes into focus
   useFocusEffect(
@@ -162,7 +156,7 @@ const confirmDeleteImage = (image) => {
       <TouchableOpacity 
         onPress={() => handleImageClick(item)} 
         onLongPress={() => confirmDeleteImage(item)}
-        delayLongPress={500} // 500ms long press duration
+        delayLongPress={500}
         style={styles.gridImageContainer}
       >
         <Image 
@@ -179,12 +173,7 @@ const confirmDeleteImage = (image) => {
   if (isLoading) {
     return (
       <View style={styles.centeredContainer}>
-        <ActivityIndicator 
-          size="large" 
-          color="#0000ff" 
-          style={styles.loader}
-        />
-        {/* <Text style={styles.loadingText}>Loading images...</Text> */}
+        <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
       </View>
     );
   }
@@ -209,6 +198,43 @@ const confirmDeleteImage = (image) => {
         value={searchQuery}
         onChangeText={handleSearch}
       />
+
+      {/* Map toggle button */}
+      <TouchableOpacity 
+        onPress={() => setIsMapVisible(prev => !prev)} 
+        style={styles.mapToggleButton}
+      >
+        <Ionicons name="map" size={30} color="#000" />
+      </TouchableOpacity>
+
+      {/* Conditionally render MapView */}
+      {isMapVisible && (
+        <MapView 
+        style={styles.map}
+        initialRegion={{
+          latitude: -26.2041,  // Johannesburg latitude (South Africa)
+          longitude: 28.0473,  // Johannesburg longitude (South Africa)
+          latitudeDelta: 5,    // Adjust zoom level for better visibility of South Africa
+          longitudeDelta: 5,   // Adjust zoom level for better visibility of South Africa
+        }}
+      >
+      
+          {filteredImages.map((image) => 
+            image.latitude && image.longitude ? (
+              <Marker
+                key={image.id}
+                coordinate={{
+                  latitude: parseFloat(image.latitude),
+                  longitude: parseFloat(image.longitude),
+                }}
+                title={image.timestamp}
+                description={`Taken on ${image.timestamp}`}
+              />
+            ) : null
+          )}
+        </MapView>
+      )}
+
       {filteredImages.length === 0 ? (
         <Text style={styles.emptyText}>No images available</Text>
       ) : (
@@ -222,6 +248,7 @@ const confirmDeleteImage = (image) => {
           ListEmptyComponent={<Text style={styles.emptyText}>No images found</Text>}
         />
       )}
+
       <Modal 
         visible={modalVisible} 
         transparent={true} 
@@ -245,11 +272,27 @@ const confirmDeleteImage = (image) => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  map: {
+    height: 300, 
+    borderRadius: 10,
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+  },
+  mapToggleButton: {
+    position: 'absolute',
+    top: 5,
+    right: 19,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
   },
   centeredContainer: {
     flex: 1,
@@ -269,10 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 20,
     backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    elevation: 2,
+    width: '80%',
   },
   gridImageContainer: {
     flex: 1,
@@ -282,7 +322,6 @@ const styles = StyleSheet.create({
   },
   gridImage: {
     width: '100%',
-    Top:20,
     height: 150,
     borderRadius: 10,
   },
@@ -292,49 +331,14 @@ const styles = StyleSheet.create({
     color: '#333',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 5,
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
     position: 'absolute',
     bottom: 0,
     width: '100%',
   },
-  noSpaceColumnWrapper: {
-    justifyContent: 'space-between',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 10,
-    borderRadius: 50,
-    zIndex: 1,
-  },
-  closeButtonText: {
-    color: 'white',
-    fontSize: 18,
-  },
   fullScreenImage: {
-    // alignContent:"center",
     width: '100%',
     height: '100%',
-    resizeMode: 'fill',
-    position: 'relative',
-    backgroundColor: 'rgba(0,0,0,0.9)',
-  },
-  imageSlide: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  imageInfo: {
-    padding: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    width: '90%',
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
+    resizeMode: 'contain',
   },
   emptyText: {
     textAlign: 'center',
@@ -343,6 +347,5 @@ const styles = StyleSheet.create({
     color: '#777',
   },
 });
-
 
 export default HomeScreen;

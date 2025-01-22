@@ -106,6 +106,7 @@ export const DrawerContent = ({ navigation }) => {
           icon={() => <MaterialCommunityIcons name="plus-circle" size={24} color="#000" />}
           onPress={selectImage}
         />
+      
       </Drawer.Section>
 
       {imageUri && (
