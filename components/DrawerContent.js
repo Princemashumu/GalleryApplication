@@ -118,7 +118,7 @@ export const DrawerContent = ({ navigation }) => {
 
       <Drawer.Section title="" style={styles.followUsSection}>
         <View style={styles.iconContainer}>
-          <MaterialCommunityIcons
+          {/* <MaterialCommunityIcons
             name="github"
             size={30}
             onPress={() => Linking.openURL('https://github.com/your-profile')}
@@ -141,7 +141,7 @@ export const DrawerContent = ({ navigation }) => {
             size={30}
             onPress={() => Linking.openURL('https://www.whatsapp.com/in/your-profile')}
             style={styles.icon}
-          />
+          /> */}
         </View>
         <Text style={styles.versionText}>Version 1.2.4.0</Text>
       </Drawer.Section>
@@ -187,5 +187,10 @@ const styles = StyleSheet.create({
     height: 200,
     resizeMode: 'cover',
     borderRadius: 10,
+  },
+  title: {
+    fontSize: 50,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
 });

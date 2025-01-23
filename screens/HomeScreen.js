@@ -222,6 +222,7 @@ const HomeScreen = () => {
           {filteredImages.map((image) => 
             image.latitude && image.longitude ? (
               <Marker
+              style={color= 'red'}
                 key={image.id}
                 coordinate={{
                   latitude: parseFloat(image.latitude),
